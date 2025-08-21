@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tailor CRM App</title>
+  <meta name="description" content="Tailor CRM - Manage shops, customers, bills and analytics" />
+  <meta name="theme-color" content="#22c55e" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Tailor CRM" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192x192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192x192.png" />
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">Tailor CRM</div>
+    <nav class="nav" id="mobile-nav">
+      <button class="btn link" id="nav-shops">Shops</button>
+      <button class="btn link" id="nav-customers">Customers</button>
+      <button class="btn link" id="nav-bills">Bills</button>
+      <button class="btn link" id="nav-analytics">Reports & Analytics</button>
+    </nav>
+    <button class="mobile-nav-toggle" id="mobile-nav-toggle" aria-label="Toggle navigation">☰</button>
+    <div class="spacer"></div>
+    <div class="session">
+      <span id="session-email"></span>
+      <button class="btn reload-btn" id="reload-btn" title="Refresh Page" aria-label="Refresh Page">🔄</button>
+      <button class="btn" id="logout-btn">Logout</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Shops Section -->
+    <section id="section-shops" class="section active">
+      <div class="section-header">
+        <h2>Shops</h2>
+        <div class="row">
+          <input type="text" id="shop-name" placeholder="New shop name" />
+          <button class="btn primary" id="add-shop-btn">Add Shop</button>
+        </div>
+      </div>
+      <div id="shops-list" class="grid"></div>
+    </section>
+
+    <!-- Customers Section -->
+    <section id="section-customers" class="section">
+      <div class="section-header">
+        <h2>Customers</h2>
+        <div class="row wrap">
+          <select id="customers-shop-select"></select>
+          <input type="text" id="customer-name" placeholder="Customer name" />
+          <input type="text" id="customer-address" placeholder="Address" />
+          <input type="tel" id="customer-phone" placeholder="Phone" />
+          <button class="btn primary" id="add-customer-btn">Add Customer</button>
+        </div>
+      </div>
+      <div id="customers-list" class="grid"></div>
+    </section>
+
+    <!-- Bills Section -->
+    <section id="section-bills" class="section">
+      <div class="section-header">
+        <h2>Bills</h2>
+        <div class="row wrap">
+          <select id="bills-shop-select"></select>
+          <select id="bills-customer-select"></select>
+          <input type="number" id="stitching-amount" placeholder="Stitching Amount" min="0" step="0.01" />
+          <input type="number" id="balance-amount" placeholder="Balance Amount" min="0" step="0.01" />
+          <select id="balance-status">
+            <option value="paid_sf">Bill Paid SF</option>
+            <option value="unpaid">Mere Paas</option>
+          </select>
+          <input type="file" id="bill-photo" accept="image/*" />
+          <button class="btn primary" id="add-bill-btn">Add Bill</button>
+        </div>
+      </div>
+      <div id="bills-list" class="grid"></div>
+    </section>
+
+    <!-- Analytics Section -->
+    <section id="section-analytics" class="section">
+      <div class="section-header">
+        <h2>Reports & Analytics</h2>
+      </div>
+      <div class="cards">
+        <div class="stat-card">
+          <div class="stat-title">Total Paid Balance</div>
+          <div class="stat-value" id="total-paid">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-title">Total Unpaid Balance</div>
+          <div class="stat-value" id="total-unpaid">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-title">Total Stitching</div>
+          <div class="stat-value" id="total-stitching">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-title">50% Deducted</div>
+          <div class="stat-value" id="fifty-percent-deducted">0</div>
+        </div>
+      </div>
+
+      <div class="section-subheader">
+        <h3>Shops Report</h3>
+      </div>
+      <div id="shops-report" class="grid"></div>
+    </section>
+  </main>
+
+  <!-- Global Image Modal -->
+  <div id="image-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="image-modal-title">
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <div id="image-modal-title">Bill Image</div>
+        <button id="image-modal-close" class="btn small" aria-label="Close">×</button>
+      </div>
+      <div class="modal-body">
+        <img id="image-modal-img" alt="bill preview" />
+      </div>
+    </div>
+  </div>
+
+  <template id="shop-card-template">
+    <div class="card">
+      <div class="card-row">
+        <strong class="shop-name"></strong>
+      </div>
+      <div class="row end gap">
+        <button class="btn small" data-action="edit">Edit</button>
+        <button class="btn small danger" data-action="delete">Delete</button>
+      </div>
+    </div>
+  </template>
+
+  <template id="customer-card-template">
+    <div class="card">
+      <div class="card-row">
+        <strong class="customer-name"></strong>
+      </div>
+      <div class="muted customer-address"></div>
+      <div class="muted customer-phone"></div>
+      <div class="row end gap">
+        <button class="btn small" data-action="edit">Edit</button>
+        <button class="btn small danger" data-action="delete">Delete</button>
+      </div>
+    </div>
+  </template>
+
+  <template id="bill-card-template">
+    <div class="card">
+      <div class="card-row">
+        <strong class="bill-customer"></strong>
+      </div>
+      <div class="muted">Stitching: <span class="bill-stitching"></span></div>
+      <div class="muted">Balance: <span class="bill-balance"></span></div>
+      <div class="muted">Status: <span class="bill-status"></span></div>
+      <div class="bill-thumb">
+        <img class="bill-image" alt="bill" />
+      </div>
+      <div class="row end gap">
+        <button class="btn small" data-action="open">Open Image</button>
+        <button class="btn small" data-action="replace">Replace Photo</button>
+        <button class="btn small" data-action="edit">Edit</button>
+        <button class="btn small danger" data-action="delete">Delete</button>
+      </div>
+      <input type="file" accept="image/*" class="hidden file-replace" />
+    </div>
+  </template>
+
+
+
+  <!-- Config and libraries -->
+  <script src="assets/js/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // Create supabase client directly
+    const cfg = window.__SUPABASE_CONFIG__ || {};
+    window.supabase = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+    console.log("Supabase client created:", window.supabase);
+    
+    // Analytics update function
+    window.updateFiftyPercent = async function() {
+      try {
+        const { data } = await window.supabase.from("bills").select("stitching_amount");
+        const total = data.reduce((sum, r) => sum + Number(r.stitching_amount || 0), 0);
+        const half = total / 2;
+        
+        // Update both total stitching and 50% deducted
+        const totalEl = document.getElementById("total-stitching");
+        const fiftyEl = document.getElementById("fifty-percent-deducted");
+        
+        if (totalEl) totalEl.textContent = total.toFixed(2);
+        if (fiftyEl) fiftyEl.textContent = half.toFixed(2);
+        
+        console.log("Analytics updated - Total:", total, "50%:", half);
+      } catch (err) {
+        console.error("Analytics update error:", err);
+      }
+    };
+    
+    // Auto-update analytics when page loads
+    setTimeout(() => {
+      window.updateFiftyPercent();
+    }, 1000);
+  </script>
+
+  <!-- Mobile navigation script -->
+  <script>
+    // Mobile navigation toggle
+    document.addEventListener('DOMContentLoaded', function() {
+      const mobileToggle = document.getElementById('mobile-nav-toggle');
+      const mobileNav = document.getElementById('mobile-nav');
+      const reloadBtn = document.getElementById('reload-btn');
+      
+      // Reload button functionality
+      if (reloadBtn) {
+        reloadBtn.addEventListener('click', function() {
+          // Add loading state
+          reloadBtn.style.transform = 'rotate(360deg)';
+          reloadBtn.style.transition = 'transform 0.6s ease';
+          
+          // Reload the page after animation
+          setTimeout(function() {
+            window.location.reload();
+          }, 300);
+        });
+      }
+      
+      if (mobileToggle && mobileNav) {
+        mobileToggle.addEventListener('click', function() {
+          mobileNav.classList.toggle('mobile-hidden');
+        });
+        
+        // Close mobile nav when clicking on nav items
+        const navButtons = mobileNav.querySelectorAll('.btn');
+        navButtons.forEach(button => {
+          button.addEventListener('click', function() {
+            // Only close on mobile screens
+            if (window.innerWidth <= 768) {
+              mobileNav.classList.add('mobile-hidden');
+            }
+          });
+        });
+        
+        // Close mobile nav when clicking outside
+        document.addEventListener('click', function(e) {
+          if (window.innerWidth <= 768 && 
+              !mobileNav.contains(e.target) && 
+              !mobileToggle.contains(e.target) && 
+              !mobileNav.classList.contains('mobile-hidden')) {
+            mobileNav.classList.add('mobile-hidden');
+          }
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', function() {
+          if (window.innerWidth > 768) {
+            mobileNav.classList.remove('mobile-hidden');
+          } else {
+            mobileNav.classList.add('mobile-hidden');
+          }
+        });
+      }
+    });
+  </script>
+
+  <!-- App modules -->
+  <script type="module" src="assets/js/app.js"></script>
+  <script type="module" src="assets/js/shops.js"></script>
+  <script type="module" src="assets/js/customers.js"></script>
+  <script type="module" src="assets/js/bills.js"></script>
+  <script type="module" src="assets/js/analytics.js"></script>
+  
+  <!-- PWA Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/sw.js')
+          .then(function(registration) {
+            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+          }, function(err) {
+            console.log('ServiceWorker registration failed: ', err);
+          });
+      });
+    }
+  </script>
+</body>
+</html>
+
+
