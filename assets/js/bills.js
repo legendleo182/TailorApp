@@ -86,7 +86,7 @@ async function loadBills() {
   if (!shopId) return;
   const { data, error } = await supabase
     .from("bills")
-    .select("id, customer_id, stitching_amount, balance_amount, status, image_url, customers(name)")
+    .select("id, customer_id, stitching_amount, balance_amount, status, image_url, created_at, customers(name)")
     .eq("shop_id", shopId)
     .order("created_at", { ascending: false });
   if (error) return alert(error.message);
@@ -112,6 +112,17 @@ function renderBills(bills) {
     node.querySelector(".bill-stitching").textContent = Number(b.stitching_amount || 0).toFixed(2);
     node.querySelector(".bill-balance").textContent = Number(b.balance_amount || 0).toFixed(2);
     node.querySelector(".bill-status").textContent = b.status === "paid_sf" ? "Bill Paid SF" : "Mere Paas";
+    
+    // Format and display the date
+    if (b.created_at) {
+      const date = new Date(b.created_at);
+      const formattedDate = date.toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+      node.querySelector(".bill-date").textContent = `Added: ${formattedDate}`;
+    }
     const img = node.querySelector(".bill-image");
     if (b.image_url) {
       img.src = b.image_url;

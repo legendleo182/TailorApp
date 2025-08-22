@@ -19,7 +19,7 @@ async function loadCustomers() {
   if (!shopId) return;
   const { data, error } = await supabase
     .from("customers")
-    .select("id, name, address, phone")
+    .select("id, name, address, phone, created_at")
     .eq("shop_id", shopId)
     .order("created_at", { ascending: false });
   if (error) return alert(error.message);
@@ -34,6 +34,18 @@ function renderCustomers(customers) {
     node.querySelector(".customer-name").textContent = c.name;
     node.querySelector(".customer-address").textContent = c.address || "";
     node.querySelector(".customer-phone").textContent = c.phone || "";
+    
+    // Format and display the date
+    if (c.created_at) {
+      const date = new Date(c.created_at);
+      const formattedDate = date.toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+      node.querySelector(".customer-date").textContent = `Added: ${formattedDate}`;
+    }
+    
     node.querySelector('[data-action="edit"]').addEventListener("click", () => editCustomer(c));
     node.querySelector('[data-action="delete"]').addEventListener("click", () => deleteCustomer(c));
     listEl.appendChild(node);
