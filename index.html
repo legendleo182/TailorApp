@@ -12,7 +12,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192x192.png" />
   <link rel="apple-touch-icon" href="icons/icon-192x192.png" />
-  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/css/styles.css?v=1.0.1" />
 </head>
 <body>
   <div class="container auth-container">
@@ -38,26 +38,50 @@
   </div>
 
   <!-- Config (create a copy of config.example.js as config.js and fill values) -->
-  <script src="assets/js/config.js"></script>
+  <script src="assets/js/config.js?v=1.0.1"></script>
+  <!-- Cache utilities -->
+  <script src="assets/js/cache-utils.js?v=1.0.1"></script>
   <!-- Supabase JS v2 -->
   <script type="module" src="https://esm.sh/@supabase/supabase-js@2"></script>
   <!-- Supabase client bootstrap -->
-  <script type="module" src="assets/js/supabase.js"></script>
+  <script type="module" src="assets/js/supabase.js?v=1.0.1"></script>
   <!-- Auth logic -->
-  <script type="module" src="assets/js/auth.js"></script>
+  <script type="module" src="assets/js/auth.js?v=1.0.1"></script>
   
   <!-- PWA Service Worker Registration -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
-        navigator.serviceWorker.register('/sw.js')
+        // Add cache-busting parameter to force service worker update
+        navigator.serviceWorker.register('/sw.js?v=1.0.1')
           .then(function(registration) {
             console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            
+            // Check for updates
+            registration.addEventListener('updatefound', () => {
+              console.log('Service Worker update found');
+              const newWorker = registration.installing;
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // New service worker is installed and ready
+                  console.log('New service worker installed, reloading page...');
+                  window.location.reload();
+                }
+              });
+            });
           }, function(err) {
             console.log('ServiceWorker registration failed: ', err);
           });
       });
     }
+    
+    // Development mode: Force reload on Ctrl+R or Cmd+R
+    document.addEventListener('keydown', function(e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+        e.preventDefault();
+        window.location.reload(true); // Force reload from server
+      }
+    });
   </script>
 </body>
 </html>

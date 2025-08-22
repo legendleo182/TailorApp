@@ -12,7 +12,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192x192.png" />
   <link rel="apple-touch-icon" href="icons/icon-192x192.png" />
-  <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/css/styles.css?v=1.0.1" />
 </head>
 <body>
   <header class="app-header">
@@ -177,8 +177,9 @@
 
 
   <!-- Config and libraries -->
-  <script src="assets/js/config.js"></script>
+  <script src="assets/js/config.js?v=1.0.1"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/cache-utils.js?v=1.0.1"></script>
   <script>
     // Create supabase client directly
     const cfg = window.__SUPABASE_CONFIG__ || {};
@@ -221,7 +222,15 @@
       
       // Reload button functionality
       if (reloadBtn) {
-        reloadBtn.addEventListener('click', function() {
+        reloadBtn.addEventListener('click', function(e) {
+          // On mobile, show cache options on long press
+          if (window.innerWidth <= 768) {
+            e.preventDefault();
+            window.cacheUtils.showMobileCacheMenu();
+            return;
+          }
+          
+          // On desktop, normal reload
           // Add loading state
           reloadBtn.style.transform = 'rotate(360deg)';
           reloadBtn.style.transition = 'transform 0.6s ease';
@@ -272,24 +281,46 @@
   </script>
 
   <!-- App modules -->
-  <script type="module" src="assets/js/app.js"></script>
-  <script type="module" src="assets/js/shops.js"></script>
-  <script type="module" src="assets/js/customers.js"></script>
-  <script type="module" src="assets/js/bills.js"></script>
-  <script type="module" src="assets/js/analytics.js"></script>
+  <script type="module" src="assets/js/app.js?v=1.0.1"></script>
+  <script type="module" src="assets/js/shops.js?v=1.0.1"></script>
+  <script type="module" src="assets/js/customers.js?v=1.0.1"></script>
+  <script type="module" src="assets/js/bills.js?v=1.0.1"></script>
+  <script type="module" src="assets/js/analytics.js?v=1.0.1"></script>
   
   <!-- PWA Service Worker Registration -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
-        navigator.serviceWorker.register('/sw.js')
+        // Add cache-busting parameter to force service worker update
+        navigator.serviceWorker.register('/sw.js?v=1.0.1')
           .then(function(registration) {
             console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            
+            // Check for updates
+            registration.addEventListener('updatefound', () => {
+              console.log('Service Worker update found');
+              const newWorker = registration.installing;
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // New service worker is installed and ready
+                  console.log('New service worker installed, reloading page...');
+                  window.location.reload();
+                }
+              });
+            });
           }, function(err) {
             console.log('ServiceWorker registration failed: ', err);
           });
       });
     }
+    
+    // Development mode: Force reload on Ctrl+R or Cmd+R
+    document.addEventListener('keydown', function(e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+        e.preventDefault();
+        window.location.reload(true); // Force reload from server
+      }
+    });
   </script>
 </body>
 </html>
