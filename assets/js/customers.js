@@ -1,4 +1,5 @@
-import { supabase } from "./supabase.js";
+// Use global supabase instead of import
+const supabase = window.supabase;
 
 const shopSelect = document.getElementById("customers-shop-select");
 const nameInput = document.getElementById("customer-name");
@@ -24,6 +25,7 @@ async function loadCustomers() {
     .order("created_at", { ascending: false });
   if (error) return alert(error.message);
   renderCustomers(data || []);
+  updateCustomersCount(data?.length || 0);
 }
 
 function renderCustomers(customers) {
@@ -75,6 +77,13 @@ async function editCustomer(c) {
     .eq("id", c.id);
   if (error) return alert(error.message);
   await loadCustomers();
+}
+
+function updateCustomersCount(count) {
+  const countElement = document.getElementById("customers-count");
+  if (countElement) {
+    countElement.textContent = count;
+  }
 }
 
 async function deleteCustomer(c) {

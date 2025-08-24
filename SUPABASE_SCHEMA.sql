@@ -24,6 +24,8 @@ create table if not exists public.bills (
   stitching_amount numeric(12,2) not null default 0,
   balance_amount numeric(12,2) not null default 0,
   status text not null check (status in ('paid_sf','unpaid')) default 'unpaid',
+  is_completed boolean not null default false,
+  completion_reason text,
   image_url text,
   created_at timestamp with time zone default now()
 );

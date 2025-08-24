@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quick Bills Fix</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .debug-info { background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .error { color: red; }
+        .success { color: green; }
+        .warning { color: orange; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Quick Bills Fix</h1>
+    
+    <div class="debug-info">
+        <h3>Debug Information</h3>
+        <div id="debug-info"></div>
+    </div>
+    
+    <div>
+        <button onclick="testMainApp()">Test Main App Bills Loading</button>
+        <button onclick="testSimpleBills()">Test Simple Bills Loading</button>
+        <button onclick="checkElements()">Check DOM Elements</button>
+        <button onclick="forceLoadBills()">Force Load Bills</button>
+    </div>
+    
+    <div id="bills-container">
+        <h3>Bills will appear here:</h3>
+        <div id="bills-list"></div>
+    </div>
+    
+    <script src="assets/js/config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Create supabase client
+        const cfg = window.__SUPABASE_CONFIG__ || {};
+        window.supabase = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+        
+        const debugInfo = document.getElementById('debug-info');
+        const billsList = document.getElementById('bills-list');
+        
+        function log(message, type = 'info') {
+            const color = type === 'error' ? 'red' : type === 'success' ? 'green' : type === 'warning' ? 'orange' : 'black';
+            debugInfo.innerHTML += `<p style="color: ${color}">${new Date().toLocaleTimeString()}: ${message}</p>`;
+            console.log(message);
+        }
+        
+        function checkElements() {
+            log("Checking DOM elements...");
+            
+            // Check if bills section exists
+            const billsSection = document.getElementById('section-bills');
+            log(`Bills section found: ${!!billsSection}`, billsSection ? 'success' : 'error');
+            
+            // Check if bills list exists
+            const billsListElement = document.getElementById('bills-list');
+            log(`Bills list element found: ${!!billsListElement}`, billsListElement ? 'success' : 'error');
+            
+            // Check if template exists
+            const template = document.getElementById('bill-card-template');
+            log(`Bill template found: ${!!template}`, template ? 'success' : 'error');
+            
+            // Check if shop select exists
+            const shopSelect = document.getElementById('bills-shop-select');
+            log(`Shop select found: ${!!shopSelect}`, shopSelect ? 'success' : 'error');
+            
+            // Check if customer select exists
+            const customerSelect = document.getElementById('bills-customer-select');
+            log(`Customer select found: ${!!customerSelect}`, customerSelect ? 'success' : 'error');
+        }
+        
+        async function testSimpleBills() {
+            log("Testing simple bills loading...");
+            
+            try {
+                // Get shops
+                const { data: shops, error: shopsError } = await supabase.from("shops").select("id, name");
+                
+                if (shopsError) {
+                    log(`ERROR loading shops: ${shopsError.message}`, 'error');
+                    return;
+                }
+                
+                if (shops.length === 0) {
+                    log("No shops found!", 'warning');
+                    return;
+                }
+                
+                const shopId = shops[0].id;
+                log(`Using shop: ${shops[0].name} (${shopId})`, 'success');
+                
+                // Load bills
+                const { data: bills, error: billsError } = await supabase
+                    .from("bills")
+                    .select("id, customer_id, stitching_amount, balance_amount, status, image_url, created_at, customers(name)")
+                    .eq("shop_id", shopId)
+                    .order("created_at", { ascending: false });
+                
+                if (billsError) {
+                    log(`ERROR loading bills: ${billsError.message}`, 'error');
+                    return;
+                }
+                
+                log(`Loaded ${bills.length} bills successfully`, 'success');
+                
+                // Display bills in a simple format
+                billsList.innerHTML = '';
+                bills.forEach((bill, index) => {
+                    const billDiv = document.createElement('div');
+                    billDiv.style.border = '1px solid #ccc';
+                    billDiv.style.padding = '10px';
+                    billDiv.style.margin = '10px 0';
+                    billDiv.style.borderRadius = '5px';
+                    
+                    billDiv.innerHTML = `
+                        <h4>Bill ${index + 1}</h4>
+                        <p><strong>Customer:</strong> ${bill.customers?.name || bill.customer_id}</p>
+                        <p><strong>Stitching:</strong> ${Number(bill.stitching_amount || 0).toFixed(2)}</p>
+                        <p><strong>Balance:</strong> ${Number(bill.balance_amount || 0).toFixed(2)}</p>
+                        <p><strong>Status:</strong> ${bill.status === "paid_sf" ? "Bill Paid SF" : "Mere Paas"}</p>
+                        <p><strong>Date:</strong> ${new Date(bill.created_at).toLocaleDateString()}</p>
+                        ${bill.image_url ? `<p><strong>Has Image:</strong> Yes</p>` : ''}
+                    `;
+                    
+                    billsList.appendChild(billDiv);
+                });
+                
+                log(`Displayed ${bills.length} bills`, 'success');
+                
+            } catch (err) {
+                log(`ERROR: ${err.message}`, 'error');
+                console.error(err);
+            }
+        }
+        
+        async function testMainApp() {
+            log("Testing main app bills loading...");
+            
+            try {
+                // Simulate the main app's loadBills function
+                const shopSelect = document.getElementById('bills-shop-select');
+                const customerSelect = document.getElementById('bills-customer-select');
+                const billsListElement = document.getElementById('bills-list');
+                
+                if (!shopSelect || !customerSelect || !billsListElement) {
+                    log("Required elements not found!", 'error');
+                    return;
+                }
+                
+                // Get shops and populate select
+                const { data: shops, error: shopsError } = await supabase.from("shops").select("id, name");
+                
+                if (shopsError) {
+                    log(`ERROR loading shops: ${shopsError.message}`, 'error');
+                    return;
+                }
+                
+                shopSelect.innerHTML = shops.map((s) => `<option value="${s.id}">${s.name}</option>`).join("");
+                log(`Populated shop select with ${shops.length} shops`, 'success');
+                
+                if (shops.length > 0) {
+                    const shopId = shops[0].id;
+                    shopSelect.value = shopId;
+                    log(`Selected shop: ${shops[0].name}`, 'success');
+                    
+                    // Load customers
+                    const { data: customers, error: customersError } = await supabase
+                        .from("customers")
+                        .select("id, name")
+                        .eq("shop_id", shopId)
+                        .order("name");
+                    
+                    if (customersError) {
+                        log(`ERROR loading customers: ${customersError.message}`, 'error');
+                        return;
+                    }
+                    
+                    customerSelect.innerHTML = customers.map((c) => `<option value="${c.id}">${c.name}</option>`).join("");
+                    log(`Populated customer select with ${customers.length} customers`, 'success');
+                    
+                    // Load bills
+                    const { data: bills, error: billsError } = await supabase
+                        .from("bills")
+                        .select("id, customer_id, stitching_amount, balance_amount, status, image_url, created_at, customers(name)")
+                        .eq("shop_id", shopId)
+                        .order("created_at", { ascending: false });
+                    
+                    if (billsError) {
+                        log(`ERROR loading bills: ${billsError.message}`, 'error');
+                        return;
+                    }
+                    
+                    log(`Loaded ${bills.length} bills`, 'success');
+                    
+                    // Try to render bills using the main app's template
+                    const template = document.getElementById('bill-card-template');
+                    if (!template) {
+                        log("Bill template not found!", 'error');
+                        return;
+                    }
+                    
+                    billsListElement.innerHTML = "";
+                    
+                    bills.forEach((bill, index) => {
+                        try {
+                            const node = template.content.cloneNode(true);
+                            
+                            // Fill in the data
+                            const customerElement = node.querySelector(".bill-customer");
+                            if (customerElement) {
+                                customerElement.textContent = bill.customers?.name || bill.customer_id;
+                            }
+                            
+                            const stitchingElement = node.querySelector(".bill-stitching");
+                            if (stitchingElement) {
+                                stitchingElement.textContent = Number(bill.stitching_amount || 0).toFixed(2);
+                            }
+                            
+                            const balanceElement = node.querySelector(".bill-balance");
+                            if (balanceElement) {
+                                balanceElement.textContent = Number(bill.balance_amount || 0).toFixed(2);
+                            }
+                            
+                            const statusElement = node.querySelector(".bill-status");
+                            if (statusElement) {
+                                statusElement.textContent = bill.status === "paid_sf" ? "Bill Paid SF" : "Mere Paas";
+                            }
+                            
+                            const dateElement = node.querySelector(".bill-date");
+                            if (dateElement && bill.created_at) {
+                                const date = new Date(bill.created_at);
+                                const formattedDate = date.toLocaleDateString('en-IN', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric'
+                                });
+                                dateElement.textContent = `Added: ${formattedDate}`;
+                            }
+                            
+                            billsListElement.appendChild(node);
+                            log(`Rendered bill ${index + 1}`, 'success');
+                            
+                        } catch (err) {
+                            log(`ERROR rendering bill ${index + 1}: ${err.message}`, 'error');
+                        }
+                    });
+                    
+                    log(`Successfully rendered ${bills.length} bills`, 'success');
+                    
+                } else {
+                    log("No shops available", 'warning');
+                }
+                
+            } catch (err) {
+                log(`ERROR: ${err.message}`, 'error');
+                console.error(err);
+            }
+        }
+        
+        async function forceLoadBills() {
+            log("Force loading bills...");
+            await testSimpleBills();
+        }
+        
+        // Auto-run some checks when page loads
+        window.addEventListener('load', () => {
+            log("Page loaded, running initial checks...");
+            checkElements();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Completion Feature Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-result { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Completion Feature Test</h1>
+    
+    <div id="test-results"></div>
+    
+    <div>
+        <button onclick="testDatabaseFields()">Test Database Fields</button>
+        <button onclick="testCompletionFunction()">Test Completion Function</button>
+        <button onclick="testBillRendering()">Test Bill Rendering</button>
+    </div>
+    
+    <div id="bills-display"></div>
+    
+    <script src="assets/js/config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const cfg = window.__SUPABASE_CONFIG__ || {};
+        window.supabase = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+        
+        const testResults = document.getElementById('test-results');
+        
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+            testResults.appendChild(div);
+            console.log(message);
+        }
+        
+        async function testDatabaseFields() {
+            log("Testing database fields...");
+            
+            try {
+                // Test if completion fields exist
+                const { data, error } = await supabase
+                    .from("bills")
+                    .select("id, is_completed, completion_reason")
+                    .limit(1);
+                
+                if (error) {
+                    log(`ERROR: ${error.message}`, 'error');
+                    return;
+                }
+                
+                if (data && data.length > 0) {
+                    const bill = data[0];
+                    log(`SUCCESS: Found bill with completion fields`, 'success');
+                    log(`Bill ID: ${bill.id}`, 'info');
+                    log(`is_completed: ${bill.is_completed}`, 'info');
+                    log(`completion_reason: ${bill.completion_reason || 'null'}`, 'info');
+                } else {
+                    log("No bills found to test", 'error');
+                }
+                
+            } catch (err) {
+                log(`ERROR: ${err.message}`, 'error');
+            }
+        }
+        
+        async function testCompletionFunction() {
+            log("Testing completion function...");
+            
+            try {
+                // Get a test bill
+                const { data: bills, error } = await supabase
+                    .from("bills")
+                    .select("id, is_completed, completion_reason")
+                    .limit(1);
+                
+                if (error || !bills || bills.length === 0) {
+                    log("No bills found for testing", 'error');
+                    return;
+                }
+                
+                const testBill = bills[0];
+                log(`Testing with bill: ${testBill.id}`, 'info');
+                
+                // Test updating completion status
+                const newStatus = !testBill.is_completed;
+                const { error: updateError } = await supabase
+                    .from("bills")
+                    .update({ 
+                        is_completed: newStatus,
+                        completion_reason: newStatus ? "Test completion" : null
+                    })
+                    .eq("id", testBill.id);
+                
+                if (updateError) {
+                    log(`ERROR updating completion: ${updateError.message}`, 'error');
+                } else {
+                    log(`SUCCESS: Updated completion status to ${newStatus}`, 'success');
+                    
+                    // Revert the change
+                    const { error: revertError } = await supabase
+                        .from("bills")
+                        .update({ 
+                            is_completed: testBill.is_completed,
+                            completion_reason: testBill.completion_reason
+                        })
+                        .eq("id", testBill.id);
+                    
+                    if (revertError) {
+                        log(`WARNING: Could not revert test change: ${revertError.message}`, 'error');
+                    } else {
+                        log("SUCCESS: Reverted test change", 'success');
+                    }
+                }
+                
+            } catch (err) {
+                log(`ERROR: ${err.message}`, 'error');
+            }
+        }
+        
+        async function testBillRendering() {
+            log("Testing bill rendering...");
+            
+            try {
+                // Get shops first
+                const { data: shops, error: shopsError } = await supabase.from("shops").select("id, name");
+                
+                if (shopsError || !shops || shops.length === 0) {
+                    log("No shops found", 'error');
+                    return;
+                }
+                
+                const shopId = shops[0].id;
+                log(`Using shop: ${shops[0].name}`, 'info');
+                
+                // Load bills with completion fields
+                const { data: bills, error: billsError } = await supabase
+                    .from("bills")
+                    .select("id, customer_id, stitching_amount, balance_amount, status, image_url, created_at, is_completed, completion_reason, customers(name)")
+                    .eq("shop_id", shopId)
+                    .order("is_completed", { ascending: true })
+                    .order("created_at", { ascending: false })
+                    .limit(3);
+                
+                if (billsError) {
+                    log(`ERROR loading bills: ${billsError.message}`, 'error');
+                    return;
+                }
+                
+                log(`Loaded ${bills.length} bills successfully`, 'success');
+                
+                // Display bills
+                const displayDiv = document.getElementById('bills-display');
+                displayDiv.innerHTML = '<h3>Sample Bills:</h3>';
+                
+                bills.forEach((bill, index) => {
+                    const billDiv = document.createElement('div');
+                    billDiv.style.border = '1px solid #ccc';
+                    billDiv.style.padding = '10px';
+                    billDiv.style.margin = '10px 0';
+                    billDiv.style.borderRadius = '5px';
+                    
+                    const statusColor = bill.is_completed ? '#22c55e' : '#fbbf24';
+                    const statusText = bill.is_completed ? 'Complete' : 'Incomplete';
+                    
+                    billDiv.innerHTML = `
+                        <h4>Bill ${index + 1}</h4>
+                        <p><strong>ID:</strong> ${bill.id}</p>
+                        <p><strong>Customer:</strong> ${bill.customers?.name || bill.customer_id}</p>
+                        <p><strong>Stitching:</strong> ${Number(bill.stitching_amount || 0).toFixed(2)}</p>
+                        <p><strong>Balance:</strong> ${Number(bill.balance_amount || 0).toFixed(2)}</p>
+                        <p><strong>Status:</strong> ${bill.status === "paid_sf" ? "Bill Paid SF" : "Mere Paas"}</p>
+                        <p><strong>Completion:</strong> <span style="color: ${statusColor}; font-weight: bold;">${statusText}</span></p>
+                        ${bill.completion_reason ? `<p><strong>Reason:</strong> ${bill.completion_reason}</p>` : ''}
+                        <p><strong>Date:</strong> ${new Date(bill.created_at).toLocaleDateString()}</p>
+                    `;
+                    
+                    displayDiv.appendChild(billDiv);
+                });
+                
+                log(`Displayed ${bills.length} bills`, 'success');
+                
+            } catch (err) {
+                log(`ERROR: ${err.message}`, 'error');
+            }
+        }
+        
+        // Auto-run tests when page loads
+        window.addEventListener('load', () => {
+            log("Page loaded, running tests...");
+            setTimeout(() => {
+                testDatabaseFields();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

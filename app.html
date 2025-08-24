@@ -19,8 +19,8 @@
     <div class="brand">Tailor CRM</div>
     <nav class="nav" id="mobile-nav">
       <button class="btn link" id="nav-shops">Shops</button>
-      <button class="btn link" id="nav-customers">Customers</button>
-      <button class="btn link" id="nav-bills">Bills</button>
+      <button class="btn link" id="nav-customers">Customers <span class="count-badge" id="customers-count">0</span></button>
+      <button class="btn link" id="nav-bills">Bills <span class="count-badge" id="bills-count">0</span></button>
       <button class="btn link" id="nav-analytics">Reports & Analytics</button>
     </nav>
     <button class="mobile-nav-toggle" id="mobile-nav-toggle" aria-label="Toggle navigation">☰</button>
@@ -156,20 +156,27 @@
     <div class="card">
       <div class="card-row">
         <strong class="bill-customer"></strong>
+        <div class="completion-status">
+          <span class="status-badge" data-status="incomplete">Incomplete</span>
+        </div>
       </div>
       <div class="muted">Stitching: <span class="bill-stitching"></span></div>
       <div class="muted">Balance: <span class="bill-balance"></span></div>
       <div class="muted">Status: <span class="bill-status"></span></div>
       <div class="muted bill-date"></div>
+      <div class="completion-reason hidden">
+        <strong>Reason:</strong> <span class="reason-text"></span>
+      </div>
       <div class="bill-thumb">
         <img class="bill-image" alt="bill" />
       </div>
-      <div class="row end gap">
-        <button class="btn small" data-action="open">Open Image</button>
-        <button class="btn small" data-action="replace">Replace Photo</button>
-        <button class="btn small" data-action="edit">Edit</button>
-        <button class="btn small danger" data-action="delete">Delete</button>
-      </div>
+             <div class="row end gap">
+         <button class="btn small" data-action="complete">Mark Complete</button>
+         <button class="btn small" data-action="add-reason">Add/Edit Reason</button>
+         <button class="btn small" data-action="replace">Replace Photo</button>
+         <button class="btn small" data-action="edit">Edit</button>
+         <button class="btn small danger" data-action="delete">Delete</button>
+       </div>
       <input type="file" accept="image/*" class="hidden file-replace" />
     </div>
   </template>
@@ -284,7 +291,7 @@
   <script type="module" src="assets/js/app.js?v=1.0.1"></script>
   <script type="module" src="assets/js/shops.js?v=1.0.1"></script>
   <script type="module" src="assets/js/customers.js?v=1.0.1"></script>
-  <script type="module" src="assets/js/bills.js?v=1.0.1"></script>
+  <script type="module" src="assets/js/bills.js?v=1.0.4"></script>
   <script type="module" src="assets/js/analytics.js?v=1.0.1"></script>
   
   <!-- PWA Service Worker Registration -->

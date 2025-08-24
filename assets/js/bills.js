@@ -1,7 +1,8 @@
 // Use global supabase instead of import
 const supabase = window.supabase;
 
-console.log("Bills.js loaded", supabase);
+console.log("Bills.js loaded v1.0.4", supabase);
+console.log("Completion feature is now ENABLED with separate Add Reason button!");
 
 // Storage cleanup utility - available immediately
 window.cleanupStorage = async function() {
@@ -84,13 +85,40 @@ async function loadCustomers() {
 async function loadBills() {
   const shopId = shopSelect.value;
   if (!shopId) return;
-  const { data, error } = await supabase
-    .from("bills")
-    .select("id, customer_id, stitching_amount, balance_amount, status, image_url, created_at, customers(name)")
-    .eq("shop_id", shopId)
-    .order("created_at", { ascending: false });
-  if (error) return alert(error.message);
-  renderBills(data || []);
+  
+  console.log("Loading bills for shop:", shopId);
+  
+  try {
+    // Query with completion fields now that migration is done
+    const { data, error } = await supabase
+      .from("bills")
+      .select("id, customer_id, stitching_amount, balance_amount, status, image_url, created_at, is_completed, completion_reason, customers(name)")
+      .eq("shop_id", shopId)
+      .order("is_completed", { ascending: true })
+      .order("created_at", { ascending: false });
+    
+    if (error) {
+      console.error("Error loading bills:", error);
+      alert("Error loading bills: " + error.message);
+      return;
+    }
+    
+    console.log("Bills loaded successfully:", data?.length || 0, "bills");
+    
+    // Use actual data from database
+    const billsWithDefaults = (data || []).map(bill => ({
+      ...bill,
+      is_completed: bill.is_completed || false,
+      completion_reason: bill.completion_reason || null
+    }));
+    
+    renderBills(billsWithDefaults);
+    updateBillsCount(billsWithDefaults.length);
+    
+  } catch (err) {
+    console.error("Error loading bills:", err);
+    alert("Error loading bills: " + err.message);
+  }
 }
 
 function renderBills(bills) {
@@ -112,6 +140,37 @@ function renderBills(bills) {
     node.querySelector(".bill-stitching").textContent = Number(b.stitching_amount || 0).toFixed(2);
     node.querySelector(".bill-balance").textContent = Number(b.balance_amount || 0).toFixed(2);
     node.querySelector(".bill-status").textContent = b.status === "paid_sf" ? "Bill Paid SF" : "Mere Paas";
+    
+    // Handle completion status
+    const statusBadge = node.querySelector(".status-badge");
+    const completionReason = node.querySelector(".completion-reason");
+    const completeBtn = node.querySelector('[data-action="complete"]');
+    
+    if (b.is_completed) {
+      statusBadge.textContent = "Complete";
+      statusBadge.setAttribute("data-status", "complete");
+      completeBtn.textContent = "Mark Incomplete";
+      completeBtn.setAttribute("data-action", "incomplete");
+      
+      if (b.completion_reason) {
+        completionReason.querySelector(".reason-text").textContent = b.completion_reason;
+        completionReason.classList.remove("hidden");
+      } else {
+        completionReason.classList.add("hidden");
+      }
+    } else {
+      statusBadge.textContent = "Incomplete";
+      statusBadge.setAttribute("data-status", "incomplete");
+      completeBtn.textContent = "Mark Complete";
+      completeBtn.setAttribute("data-action", "complete");
+      
+      if (b.completion_reason) {
+        completionReason.querySelector(".reason-text").textContent = b.completion_reason;
+        completionReason.classList.remove("hidden");
+      } else {
+        completionReason.classList.add("hidden");
+      }
+    }
     
     // Format and display the date
     if (b.created_at) {
@@ -143,62 +202,9 @@ function renderBills(bills) {
           testModal.style.display = "grid";
         }
       });
-    } else {
-      img.style.display = "none";
-    }
-    // Open button setup
-    const openBtn = node.querySelector('[data-action="open"]');
-    if (b.image_url) {
-      openBtn.classList.remove("disabled");
-    } else {
-      openBtn.classList.add("disabled");
-    }
-    openBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      console.log("*** NEW OPEN IMAGE BUTTON CLICKED ***", b.image_url);
-      if (!b.image_url) {
-        alert("No image attached");
-        return;
-      }
-      console.log("Calling showImageInModal...");
-      
-      // Direct modal test
-      const testModal = document.getElementById("image-modal");
-      const testImg = document.getElementById("image-modal-img");
-      console.log("Direct test:", {modal: !!testModal, img: !!testImg});
-      
-      if (testModal && testImg) {
-        console.log("Direct modal opening...");
-        testImg.src = b.image_url;
-        testModal.classList.remove("hidden");
-        testModal.style.display = "grid";
-        console.log("Modal opened directly!");
-        
-        // Add direct close handler
-        const closeBtn = document.getElementById("image-modal-close");
-        if (closeBtn) {
-          closeBtn.onclick = () => {
-            testModal.classList.add("hidden");
-            testModal.style.display = "none";
-            testImg.src = "";
-          };
-        }
-        
-        // Click outside to close
-        testModal.onclick = (e) => {
-          if (e.target === testModal) {
-            testModal.classList.add("hidden");
-            testModal.style.display = "none";
-            testImg.src = "";
-          }
-        };
-      } else {
-        console.error("Modal not found in DOM");
-        // Fallback
-        window.open(b.image_url, "_blank", "noopener,noreferrer");
-      }
-    });
+         } else {
+       img.style.display = "none";
+     }
     const fileInput = node.querySelector(".file-replace");
     const replaceBtn = node.querySelector('[data-action="replace"]');
     replaceBtn.addEventListener("click", () => {
@@ -216,6 +222,19 @@ function renderBills(bills) {
       document.dispatchEvent(new CustomEvent("bills:updated"));
     });
 
+    // Complete/Incomplete button - now enabled
+    completeBtn.addEventListener("click", () => {
+      console.log("Complete/Incomplete button clicked for bill:", b.id);
+      toggleBillCompletion(b);
+    });
+    
+    // Add Reason button
+    const addReasonBtn = node.querySelector('[data-action="add-reason"]');
+    addReasonBtn.addEventListener("click", () => {
+      console.log("Add Reason button clicked for bill:", b.id);
+      addBillReason(b);
+    });
+    
     node.querySelector('[data-action="edit"]').addEventListener("click", () => {
       console.log("Edit button clicked for bill:", b.id);
       editBill(b);
@@ -351,6 +370,13 @@ async function uploadPhoto(file) {
   return publicUrl.publicUrl;
 }
 
+function updateBillsCount(count) {
+  const countElement = document.getElementById("bills-count");
+  if (countElement) {
+    countElement.textContent = count;
+  }
+}
+
 async function addBill() {
   const shopId = shopSelect.value;
   const customerId = customerSelect.value;
@@ -364,20 +390,34 @@ async function addBill() {
     imageUrl = await uploadPhoto(photoInput.files[0]);
   }
 
-  const { error } = await supabase.from("bills").insert({
-    shop_id: shopId,
-    customer_id: customerId,
-    stitching_amount: stitching,
-    balance_amount: balance,
-    status,
-    image_url: imageUrl,
-  });
-  if (error) return alert(error.message);
+  try {
+    // Insert with completion fields
+    const { error } = await supabase.from("bills").insert({
+      shop_id: shopId,
+      customer_id: customerId,
+      stitching_amount: stitching,
+      balance_amount: balance,
+      status,
+      image_url: imageUrl,
+      is_completed: false,
+      completion_reason: null
+    });
+    
+    if (error) {
+      console.error("Error adding bill:", error);
+      alert("Error adding bill: " + error.message);
+      return;
+    }
 
-  stitchingInput.value = balanceInput.value = "";
-  if (photoInput) photoInput.value = "";
-  await loadBills();
-  document.dispatchEvent(new CustomEvent("bills:updated"));
+    console.log("Bill added successfully");
+    stitchingInput.value = balanceInput.value = "";
+    if (photoInput) photoInput.value = "";
+    await loadBills();
+    document.dispatchEvent(new CustomEvent("bills:updated"));
+  } catch (err) {
+    console.error("Error adding bill:", err);
+    alert("Error adding bill: " + err.message);
+  }
 }
 
 async function editBill(b) {
@@ -391,6 +431,71 @@ async function editBill(b) {
   if (error) return alert(error.message);
   await loadBills();
   document.dispatchEvent(new CustomEvent("bills:updated"));
+}
+
+async function addBillReason(b) {
+  const currentReason = b.completion_reason || "";
+  const newReason = prompt("Enter reason for this bill:", currentReason);
+  
+  if (newReason === null) return; // User cancelled
+  
+  try {
+    const { error } = await supabase
+      .from("bills")
+      .update({ 
+        completion_reason: newReason || null
+      })
+      .eq("id", b.id);
+      
+    if (error) {
+      console.error("Error updating reason:", error.message);
+      alert("Error updating reason: " + error.message);
+      return;
+    }
+    
+    await loadBills();
+    document.dispatchEvent(new CustomEvent("bills:updated"));
+  } catch (err) {
+    console.error("Error updating reason:", err);
+    alert("Error updating reason: " + err.message);
+  }
+}
+
+async function toggleBillCompletion(b) {
+  const isCurrentlyCompleted = b.is_completed;
+  let completionReason = null;
+  
+  if (!isCurrentlyCompleted) {
+    // Marking as complete - ask for reason
+    completionReason = prompt("Enter completion reason (optional):");
+    if (completionReason === null) return; // User cancelled
+  } else {
+    // Marking as incomplete - also ask for reason
+    completionReason = prompt("Enter incomplete reason (optional):");
+    if (completionReason === null) return; // User cancelled
+  }
+  
+  try {
+    const { error } = await supabase
+      .from("bills")
+      .update({ 
+        is_completed: !isCurrentlyCompleted,
+        completion_reason: completionReason || null
+      })
+      .eq("id", b.id);
+      
+    if (error) {
+      console.error("Error updating completion status:", error.message);
+      alert("Error updating completion status: " + error.message);
+      return;
+    }
+    
+    await loadBills();
+    document.dispatchEvent(new CustomEvent("bills:updated"));
+  } catch (err) {
+    console.error("Error toggling completion:", err);
+    alert("Error updating completion status: " + err.message);
+  }
 }
 
 async function deleteBill(b) {

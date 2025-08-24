@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Bills</title>
+</head>
+<body>
+    <h1>Debug Bills Loading</h1>
+    <div id="debug-output"></div>
+    
+    <script src="assets/js/config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Create supabase client
+        const cfg = window.__SUPABASE_CONFIG__ || {};
+        window.supabase = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+        
+        const debugOutput = document.getElementById('debug-output');
+        
+        async function testBillsLoading() {
+            debugOutput.innerHTML = '<p>Testing bills loading...</p>';
+            
+            try {
+                // First test shops
+                debugOutput.innerHTML += '<p>Loading shops...</p>';
+                const { data: shops, error: shopsError } = await supabase.from("shops").select("id, name");
+                
+                if (shopsError) {
+                    debugOutput.innerHTML += `<p style="color: red;">Shops error: ${shopsError.message}</p>`;
+                    return;
+                }
+                
+                debugOutput.innerHTML += `<p>Found ${shops.length} shops: ${shops.map(s => s.name).join(', ')}</p>`;
+                
+                if (shops.length === 0) {
+                    debugOutput.innerHTML += '<p style="color: orange;">No shops found! Bills need a shop to be associated with.</p>';
+                    return;
+                }
+                
+                const firstShopId = shops[0].id;
+                debugOutput.innerHTML += `<p>Testing with shop: ${shops[0].name} (${firstShopId})</p>`;
+                
+                // Test bills with old query first
+                debugOutput.innerHTML += '<p>Trying old bills query...</p>';
+                const { data: oldBills, error: oldError } = await supabase
+                    .from("bills")
+                    .select("id, customer_id, stitching_amount, balance_amount, status, image_url, created_at")
+                    .eq("shop_id", firstShopId);
+                
+                if (oldError) {
+                    debugOutput.innerHTML += `<p style="color: red;">Old query error: ${oldError.message}</p>`;
+                } else {
+                    debugOutput.innerHTML += `<p style="color: green;">Old query success! Found ${oldBills.length} bills</p>`;
+                }
+                
+                // Test bills with new query
+                debugOutput.innerHTML += '<p>Trying new bills query...</p>';
+                const { data: newBills, error: newError } = await supabase
+                    .from("bills")
+                    .select("id, customer_id, stitching_amount, balance_amount, status, is_completed, completion_reason, image_url, created_at")
+                    .eq("shop_id", firstShopId);
+                
+                if (newError) {
+                    debugOutput.innerHTML += `<p style="color: red;">New query error: ${newError.message}</p>`;
+                } else {
+                    debugOutput.innerHTML += `<p style="color: green;">New query success! Found ${newBills.length} bills</p>`;
+                }
+                
+                // Test customers
+                debugOutput.innerHTML += '<p>Loading customers...</p>';
+                const { data: customers, error: customersError } = await supabase
+                    .from("customers")
+                    .select("id, name")
+                    .eq("shop_id", firstShopId);
+                
+                if (customersError) {
+                    debugOutput.innerHTML += `<p style="color: red;">Customers error: ${customersError.message}</p>`;
+                } else {
+                    debugOutput.innerHTML += `<p style="color: green;">Customers success! Found ${customers.length} customers</p>`;
+                }
+                
+            } catch (err) {
+                debugOutput.innerHTML += `<p style="color: red;">General error: ${err.message}</p>`;
+            }
+        }
+        
+        // Run test when page loads
+        testBillsLoading();
+    </script>
+</body>
+</html>

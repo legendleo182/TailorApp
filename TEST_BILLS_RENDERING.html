@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Bills Rendering</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .card { border: 1px solid #ccc; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .muted { color: #666; }
+        .row { display: flex; gap: 10px; }
+        .btn { padding: 5px 10px; border: 1px solid #ccc; background: #f0f0f0; cursor: pointer; }
+        .btn.small { font-size: 12px; }
+        .btn.danger { background: #ffebee; color: #c62828; }
+        .hidden { display: none; }
+        .status-badge { padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: bold; }
+        .status-badge[data-status="incomplete"] { background: #fbbf24; color: #92400e; }
+        .status-badge[data-status="complete"] { background: #22c55e; color: #052e16; }
+    </style>
+</head>
+<body>
+    <h1>Test Bills Rendering</h1>
+    <div id="test-output"></div>
+    <div id="bills-list"></div>
+    
+    <!-- Template -->
+    <template id="bill-card-template">
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <strong class="bill-customer"></strong>
+                <div>
+                    <span class="status-badge" data-status="incomplete">Incomplete</span>
+                </div>
+            </div>
+            <div class="muted">Stitching: <span class="bill-stitching"></span></div>
+            <div class="muted">Balance: <span class="bill-balance"></span></div>
+            <div class="muted">Status: <span class="bill-status"></span></div>
+            <div class="muted bill-date"></div>
+            <div class="completion-reason hidden">
+                <strong>Reason:</strong> <span class="reason-text"></span>
+            </div>
+            <div class="bill-thumb">
+                <img class="bill-image" alt="bill" style="max-width: 100px; max-height: 100px;" />
+            </div>
+            <div class="row">
+                <button class="btn small" data-action="complete">Mark Complete</button>
+                <button class="btn small" data-action="open">Open Image</button>
+                <button class="btn small" data-action="replace">Replace Photo</button>
+                <button class="btn small" data-action="edit">Edit</button>
+                <button class="btn small danger" data-action="delete">Delete</button>
+            </div>
+        </div>
+    </template>
+    
+    <script src="assets/js/config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Create supabase client
+        const cfg = window.__SUPABASE_CONFIG__ || {};
+        window.supabase = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+        
+        const testOutput = document.getElementById('test-output');
+        const billsList = document.getElementById('bills-list');
+        
+        function log(message) {
+            testOutput.innerHTML += `<p>${message}</p>`;
+            console.log(message);
+        }
+        
+        function renderBills(bills) {
+            log(`renderBills called with: ${bills.length} bills`);
+            billsList.innerHTML = "";
+            const tpl = document.getElementById("bill-card-template");
+            log(`Template found: ${!!tpl}`);
+            
+            if (!tpl) {
+                log("ERROR: Template not found!");
+                return;
+            }
+            
+            bills.forEach((b, index) => {
+                try {
+                    log(`Rendering bill ${index}: ${b.id}`);
+                    const node = tpl.content.cloneNode(true);
+                    
+                    // Fill in the data
+                    node.querySelector(".bill-customer").textContent = b.customers?.name || b.customer_id;
+                    node.querySelector(".bill-stitching").textContent = Number(b.stitching_amount || 0).toFixed(2);
+                    node.querySelector(".bill-balance").textContent = Number(b.balance_amount || 0).toFixed(2);
+                    node.querySelector(".bill-status").textContent = b.status === "paid_sf" ? "Bill Paid SF" : "Mere Paas";
+                    
+                    // Handle completion status
+                    const statusBadge = node.querySelector(".status-badge");
+                    const completionReason = node.querySelector(".completion-reason");
+                    const completeBtn = node.querySelector('[data-action="complete"]');
+                    
+                    if (b.is_completed) {
+                        statusBadge.textContent = "Complete";
+                        statusBadge.setAttribute("data-status", "complete");
+                        completeBtn.textContent = "Mark Incomplete";
+                        completeBtn.setAttribute("data-action", "incomplete");
+                        
+                        if (b.completion_reason) {
+                            completionReason.querySelector(".reason-text").textContent = b.completion_reason;
+                            completionReason.classList.remove("hidden");
+                        }
+                    } else {
+                        statusBadge.textContent = "Incomplete";
+                        statusBadge.setAttribute("data-status", "incomplete");
+                        completeBtn.textContent = "Mark Complete";
+                        completeBtn.setAttribute("data-action", "complete");
+                        completionReason.classList.add("hidden");
+                    }
+                    
+                    // Format and display the date
+                    if (b.created_at) {
+                        const date = new Date(b.created_at);
+                        const formattedDate = date.toLocaleDateString('en-IN', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric'
+                        });
+                        node.querySelector(".bill-date").textContent = `Added: ${formattedDate}`;
+                    }
+                    
+                    // Handle image
+                    const img = node.querySelector(".bill-image");
+                    if (b.image_url) {
+                        img.src = b.image_url;
+                        img.style.display = "block";
+                    } else {
+                        img.style.display = "none";
+                    }
+                    
+                    // Add event listeners
+                    completeBtn.addEventListener("click", () => {
+                        log(`Complete button clicked for bill: ${b.id}`);
+                        alert("Completion feature will be available after database migration.");
+                    });
+                    
+                    node.querySelector('[data-action="edit"]').addEventListener("click", () => {
+                        log(`Edit button clicked for bill: ${b.id}`);
+                    });
+                    
+                    node.querySelector('[data-action="delete"]').addEventListener("click", () => {
+                        log(`Delete button clicked for bill: ${b.id}`);
+                    });
+                    
+                    billsList.appendChild(node);
+                    log(`Bill ${index} appended to DOM successfully`);
+                    
+                } catch (err) {
+                    log(`ERROR rendering bill ${index}: ${err.message}`);
+                    console.error(err);
+                }
+            });
+            log("renderBills completed");
+        }
+        
+        async function testBillsRendering() {
+            log("Testing bills rendering...");
+            
+            try {
+                // Get shops first
+                const { data: shops, error: shopsError } = await supabase.from("shops").select("id, name");
+                
+                if (shopsError) {
+                    log(`ERROR loading shops: ${shopsError.message}`);
+                    return;
+                }
+                
+                if (shops.length === 0) {
+                    log("No shops found!");
+                    return;
+                }
+                
+                const shopId = shops[0].id;
+                log(`Using shop: ${shops[0].name} (${shopId})`);
+                
+                // Load bills
+                const { data: bills, error: billsError } = await supabase
+                    .from("bills")
+                    .select("id, customer_id, stitching_amount, balance_amount, status, image_url, created_at, customers(name)")
+                    .eq("shop_id", shopId)
+                    .order("created_at", { ascending: false });
+                
+                if (billsError) {
+                    log(`ERROR loading bills: ${billsError.message}`);
+                    return;
+                }
+                
+                log(`Loaded ${bills.length} bills successfully`);
+                
+                // Add default values for completion fields
+                const billsWithDefaults = bills.map(bill => ({
+                    ...bill,
+                    is_completed: false,
+                    completion_reason: null
+                }));
+                
+                // Render the bills
+                renderBills(billsWithDefaults);
+                
+            } catch (err) {
+                log(`ERROR: ${err.message}`);
+                console.error(err);
+            }
+        }
+        
+        // Run test when page loads
+        testBillsRendering();
+    </script>
+</body>
+</html>
