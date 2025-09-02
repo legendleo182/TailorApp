@@ -60,25 +60,41 @@
       <div id="customers-list" class="grid"></div>
     </section>
 
-    <!-- Bills Section -->
-    <section id="section-bills" class="section">
-      <div class="section-header">
-        <h2>Bills</h2>
-        <div class="row wrap">
-          <select id="bills-shop-select"></select>
-          <select id="bills-customer-select"></select>
-          <input type="number" id="stitching-amount" placeholder="Stitching Amount" min="0" step="0.01" />
-          <input type="number" id="balance-amount" placeholder="Balance Amount" min="0" step="0.01" />
-          <select id="balance-status">
-            <option value="paid_sf">Bill Paid SF</option>
-            <option value="unpaid">Mere Paas</option>
-          </select>
-          <input type="file" id="bill-photo" accept="image/*" />
-          <button class="btn primary" id="add-bill-btn">Add Bill</button>
-        </div>
-      </div>
-      <div id="bills-list" class="grid"></div>
-    </section>
+         <!-- Bills Section -->
+     <section id="section-bills" class="section">
+       <div class="section-header">
+         <h2>Bills</h2>
+         <div class="row wrap">
+           <select id="bills-shop-select"></select>
+           <select id="bills-customer-select"></select>
+           <input type="number" id="stitching-amount" placeholder="Stitching Amount" min="0" step="0.01" />
+           <input type="number" id="balance-amount" placeholder="Balance Amount" min="0" step="0.01" />
+           <select id="balance-status">
+             <option value="paid_sf">Bill Paid SF</option>
+             <option value="unpaid">Mere Paas</option>
+           </select>
+           <input type="file" id="bill-photo" accept="image/*" />
+           <button class="btn primary" id="add-bill-btn">Add Bill</button>
+         </div>
+         
+                   <!-- Bills Filter -->
+          <div class="filter-section">
+            <div class="filter-buttons">
+              <button class="filter-btn active" data-filter="all">All Bills</button>
+              <button class="filter-btn" data-filter="status-complete">Completed</button>
+              <button class="filter-btn" data-filter="reason-complete">Work Complete</button>
+              <button class="filter-btn" data-filter="ordered">Ordered</button>
+              <button class="filter-btn" data-filter="working">Working</button>
+            </div>
+            <div class="filter-info">
+              <span id="filter-count">Showing all bills</span>
+            </div>
+          </div>
+          
+
+       </div>
+       <div id="bills-list" class="grid"></div>
+     </section>
 
     <!-- Analytics Section -->
     <section id="section-analytics" class="section">
@@ -104,10 +120,40 @@
         </div>
       </div>
 
-      <div class="section-subheader">
-        <h3>Shops Report</h3>
-      </div>
-      <div id="shops-report" class="grid"></div>
+             <div class="section-subheader">
+         <h3>Shops Report</h3>
+       </div>
+       <div id="shops-report" class="grid"></div>
+       
+       <!-- Backup Section -->
+       <div class="backup-section">
+         <h3>📁 System Backup</h3>
+         <div class="backup-buttons">
+           <button class="btn primary" id="download-backup-btn">
+             📥 Download Complete Backup
+           </button>
+           <button class="btn" id="view-backup-info-btn">
+             ℹ️ Backup Info
+           </button>
+         </div>
+         <div class="backup-info hidden" id="backup-info">
+           <p><strong>Backup includes:</strong></p>
+           <ul>
+             <li>✅ All Shops Data</li>
+             <li>✅ All Customers Data</li>
+             <li>✅ All Bills Data (with completion status)</li>
+             <li>✅ Database Schema</li>
+             <li>✅ Application Code</li>
+           </ul>
+           <p><strong>Instructions:</strong></p>
+           <ol>
+             <li>Click "Download Complete Backup"</li>
+             <li>JSON file download hoga</li>
+             <li>Google Drive par upload karo</li>
+             <li>Safe backup complete! 🎉</li>
+           </ol>
+         </div>
+       </div>
     </section>
   </main>
 
@@ -291,7 +337,7 @@
   <script type="module" src="assets/js/app.js?v=1.0.1"></script>
   <script type="module" src="assets/js/shops.js?v=1.0.1"></script>
   <script type="module" src="assets/js/customers.js?v=1.0.1"></script>
-  <script type="module" src="assets/js/bills.js?v=1.0.4"></script>
+                       <script type="module" src="assets/js/bills.js?v=1.0.8"></script>
   <script type="module" src="assets/js/analytics.js?v=1.0.1"></script>
   
   <!-- PWA Service Worker Registration -->

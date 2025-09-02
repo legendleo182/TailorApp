@@ -1,8 +1,10 @@
 // Use global supabase instead of import
 const supabase = window.supabase;
 
-console.log("Bills.js loaded v1.0.4", supabase);
+console.log("Bills.js loaded v1.0.8", supabase);
 console.log("Completion feature is now ENABLED with separate Add Reason button!");
+console.log("Bill filtering system is now ENABLED with separate Status and Reason Complete filters!");
+console.log("Complete backup system is now ENABLED!");
 
 // Storage cleanup utility - available immediately
 window.cleanupStorage = async function() {
@@ -62,6 +64,10 @@ const photoInput = document.getElementById("bill-photo");
 const addBillBtn = document.getElementById("add-bill-btn");
 const billsList = document.getElementById("bills-list");
 
+// Filter variables
+let allBills = [];
+let currentFilter = "all";
+
 async function loadShops() {
   const { data, error } = await supabase.from("shops").select("id, name").order("name");
   if (error) return alert(error.message);
@@ -105,15 +111,19 @@ async function loadBills() {
     
     console.log("Bills loaded successfully:", data?.length || 0, "bills");
     
-    // Use actual data from database
-    const billsWithDefaults = (data || []).map(bill => ({
-      ...bill,
-      is_completed: bill.is_completed || false,
-      completion_reason: bill.completion_reason || null
-    }));
-    
-    renderBills(billsWithDefaults);
-    updateBillsCount(billsWithDefaults.length);
+         // Use actual data from database
+     const billsWithDefaults = (data || []).map(bill => ({
+       ...bill,
+       is_completed: bill.is_completed || false,
+       completion_reason: bill.completion_reason || null
+     }));
+     
+     // Store all bills for filtering
+     allBills = billsWithDefaults;
+     
+     // Apply current filter
+     applyFilter(currentFilter);
+     updateBillsCount(billsWithDefaults.length);
     
   } catch (err) {
     console.error("Error loading bills:", err);
@@ -324,6 +334,77 @@ function hideImageModal() {
   }
 }
 
+// Backup functions
+function setupBackupButtons() {
+  const downloadBtn = document.getElementById("download-backup-btn");
+  const infoBtn = document.getElementById("view-backup-info-btn");
+  const backupInfo = document.getElementById("backup-info");
+  
+  if (downloadBtn) {
+    downloadBtn.addEventListener("click", createCompleteBackup);
+  }
+  
+  if (infoBtn) {
+    infoBtn.addEventListener("click", () => {
+      backupInfo.classList.toggle("hidden");
+    });
+  }
+}
+
+async function createCompleteBackup() {
+  try {
+    console.log("Creating complete backup...");
+    const downloadBtn = document.getElementById("download-backup-btn");
+    downloadBtn.disabled = true;
+    downloadBtn.textContent = "🔄 Creating Backup...";
+    
+    // Get all data
+    const { data: shops } = await supabase.from("shops").select("*");
+    const { data: customers } = await supabase.from("customers").select("*");
+    const { data: bills } = await supabase.from("bills").select("*");
+    
+    // Create backup object
+    const backup = {
+      timestamp: new Date().toISOString(),
+      version: "1.0.7",
+      data: {
+        shops: shops || [],
+        customers: customers || [],
+        bills: bills || []
+      },
+      schema: {
+        shops: ["id", "name", "created_at"],
+        customers: ["id", "shop_id", "name", "address", "phone", "created_at"],
+        bills: ["id", "shop_id", "customer_id", "stitching_amount", "balance_amount", "status", "image_url", "is_completed", "completion_reason", "created_at"]
+      }
+    };
+    
+    // Create and download file
+    const backupStr = JSON.stringify(backup, null, 2);
+    const blob = new Blob([backupStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `tailor-crm-backup-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    console.log("Backup created successfully!");
+    alert("✅ Backup created successfully! File download ho gaya hai.");
+    
+  } catch (error) {
+    console.error("Backup error:", error);
+    alert("❌ Backup error: " + error.message);
+  } finally {
+    const downloadBtn = document.getElementById("download-backup-btn");
+    downloadBtn.disabled = false;
+    downloadBtn.textContent = "📥 Download Complete Backup";
+  }
+}
+
 // Setup modal close handlers when bills section loads
 function setupModalHandlers() {
   const modal = document.getElementById("image-modal");
@@ -374,6 +455,76 @@ function updateBillsCount(count) {
   const countElement = document.getElementById("bills-count");
   if (countElement) {
     countElement.textContent = count;
+  }
+}
+
+// Filter functions
+function setupFilterButtons() {
+  const filterButtons = document.querySelectorAll('.filter-btn');
+  filterButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const filter = btn.getAttribute('data-filter');
+      setActiveFilter(filter);
+      applyFilter(filter);
+    });
+  });
+}
+
+function setActiveFilter(filter) {
+  // Remove active class from all buttons
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  
+  // Add active class to clicked button
+  document.querySelector(`[data-filter="${filter}"]`).classList.add('active');
+  currentFilter = filter;
+}
+
+function applyFilter(filter) {
+  let filteredBills = [];
+  
+  switch(filter) {
+    case 'all':
+      filteredBills = allBills;
+      break;
+    case 'status-complete':
+      filteredBills = allBills.filter(bill => bill.is_completed === true);
+      break;
+    case 'reason-complete':
+      filteredBills = allBills.filter(bill => 
+        bill.completion_reason && 
+        bill.completion_reason.toLowerCase().includes('complete')
+      );
+      break;
+    case 'ordered':
+      filteredBills = allBills.filter(bill => 
+        bill.completion_reason && 
+        bill.completion_reason.toLowerCase().includes('ordered')
+      );
+      break;
+    case 'working':
+      filteredBills = allBills.filter(bill => 
+        bill.completion_reason && 
+        bill.completion_reason.toLowerCase().includes('working')
+      );
+      break;
+    default:
+      filteredBills = allBills;
+  }
+  
+  renderBills(filteredBills);
+  updateFilterCount(filteredBills.length, allBills.length);
+}
+
+function updateFilterCount(filteredCount, totalCount) {
+  const filterCountElement = document.getElementById('filter-count');
+  if (filterCountElement) {
+    if (currentFilter === 'all') {
+      filterCountElement.textContent = `Showing all ${totalCount} bills`;
+    } else {
+      filterCountElement.textContent = `Showing ${filteredCount} of ${totalCount} bills (${currentFilter} filter)`;
+    }
   }
 }
 
@@ -623,7 +774,11 @@ console.log("About to setup modal handlers...");
 setTimeout(() => {
   console.log("Setting up modal with delay...");
   setupModalHandlers();
+  setupFilterButtons();
+  setupBackupButtons();
   console.log("Modal setup completed");
+  console.log("Filter buttons setup completed");
+  console.log("Backup buttons setup completed");
 }, 100);
 
 
