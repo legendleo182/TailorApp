@@ -146,35 +146,37 @@ img.bill-image { width: 100%; height: 100%; object-fit: cover; }
 .filter-section {
   margin-top: 20px;
   padding: 20px;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  background: var(--card);
   border-radius: 16px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: 1px solid #1f2937;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
 }
 
 .filter-buttons {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   flex-wrap: wrap;
   margin-bottom: 16px;
   justify-content: center;
 }
 
 .filter-btn {
-  padding: 12px 24px;
-  border: 2px solid #e2e8f0;
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  color: #475569;
-  border-radius: 25px;
-  font-size: 14px;
+  padding: 8px 16px;
+  border: 2px solid #374151;
+  background: #0b1220;
+  color: var(--fg);
+  border-radius: 20px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
+  min-width: 80px;
+  text-align: center;
 }
 
 .filter-btn::before {
@@ -184,7 +186,7 @@ img.bill-image { width: 100%; height: 100%; object-fit: cover; }
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  background: linear-gradient(90deg, transparent, rgba(34, 197, 94, 0.1), transparent);
   transition: left 0.5s;
 }
 
@@ -193,34 +195,73 @@ img.bill-image { width: 100%; height: 100%; object-fit: cover; }
 }
 
 .filter-btn:hover {
-  border-color: #3b82f6;
-  color: #3b82f6;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.15);
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2);
 }
 
 .filter-btn.active {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  border-color: #3b82f6;
-  color: white;
+  background: linear-gradient(135deg, var(--accent) 0%, #16a34a 100%);
+  border-color: var(--accent);
+  color: #052e16;
   transform: translateY(-1px);
-  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
 }
 
 .filter-btn.active:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 35px rgba(59, 130, 246, 0.4);
+  box-shadow: 0 6px 20px rgba(34, 197, 94, 0.5);
 }
 
 .filter-info {
-  font-size: 14px;
-  color: #64748b;
+  font-size: 13px;
+  color: var(--muted);
   font-style: italic;
   text-align: center;
   padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(17, 24, 39, 0.8);
   border-radius: 8px;
-  border: 1px solid rgba(226, 232, 240, 0.5);
+  border: 1px solid #1f2937;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .filter-section {
+    padding: 16px;
+    margin-top: 16px;
+  }
+  
+  .filter-buttons {
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  
+  .filter-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 16px;
+    min-width: 70px;
+    letter-spacing: 0.2px;
+  }
+  
+  .filter-info {
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .filter-buttons {
+    gap: 4px;
+  }
+  
+  .filter-btn {
+    padding: 5px 10px;
+    font-size: 11px;
+    min-width: 60px;
+    border-radius: 14px;
+  }
 }
 
 /* Backup Section Styles */
